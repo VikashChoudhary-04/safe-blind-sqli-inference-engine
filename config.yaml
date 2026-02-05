@@ -1,0 +1,34 @@
+target:
+  url: "https://example.com/product"
+  injectable_param: "id"
+  base_value: "1"
+
+network:
+  timeout: 10
+  retries: 3
+  proxy: "http://127.0.0.1:8080"
+  verify_ssl: false
+
+traffic:
+  max_requests_per_minute: 30
+  jitter_min_ms: 200
+  jitter_max_ms: 800
+
+threads:
+  worker_count: 3
+
+safety:
+  max_total_requests: 5000
+  max_error_rate: 0.2
+
+extraction:
+  max_length: 20
+  charset: "abcdefghijklmnopqrstuvwxyz0123456789_@.-"
+
+logging:
+  text_log: "logs/run.log"
+  json_log: "logs/run.json"
+
+checkpoint:
+  file: "checkpoints/state.json"
+  save_every: 25
