@@ -1,28 +1,35 @@
-import requests, time, random
+import requests
+import time
+import random
 from dataclasses import dataclass
+
 
 @dataclass
 class ResponseData:
     time: float
     length: int
+    text: str
     error: bool
+
 
 class RequestEngine:
     def __init__(self, config):
         self.url = config["target"]["url"]
-        self.param = config["target"]["injectable_param"]
-        self.base = config["target"]["base_value"]
+        self.injection_type = config["injection"]["type"]
+        self.injection_name = config["injection"]["name"]
+        self.base_value = config["injection"]["base_value"]
 
         self.timeout = config["network"]["timeout"]
         self.retries = config["network"]["retries"]
-        self.proxy = config["network"]["proxy"]
 
-        self.jitter_min = config["traffic"]["jitter_min_ms"]/1000
-        self.jitter_max = config["traffic"]["jitter_max_ms"]/1000
+        self.jitter_min = config["traffic"]["jitter_min_ms"] / 1000
+        self.jitter_max = config["traffic"]["jitter_max_ms"] / 1000
 
         self.session = requests.Session()
-        if self.proxy:
-            self.session.proxies = {"http": self.proxy, "https": self.proxy}
+        self.session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+        # Initial visit to gather cookies/session
+        self.session.get(self.url)
 
     def _sleep(self):
         time.sleep(random.uniform(self.jitter_min, self.jitter_max))
@@ -32,8 +39,26 @@ class RequestEngine:
             try:
                 self._sleep()
                 start = time.time()
-                r = self.session.get(self.url, params={self.param: payload}, timeout=self.timeout, verify=False)
-                return ResponseData(time.time()-start, len(r.text), False)
-            except:
+
+                if self.injection_type == "cookie":
+                    cookies = self.session.cookies.get_dict()
+                    cookies[self.injection_name] = self.base_value + payload
+                    r = self.session.get(self.url, cookies=cookies, timeout=self.timeout)
+
+                elif self.injection_type == "param":
+                    params = {self.injection_name: self.base_value + payload}
+                    r = self.session.get(self.url, params=params, timeout=self.timeout)
+
+                elif self.injection_type == "header":
+                    headers = {self.injection_name: self.base_value + payload}
+                    r = self.session.get(self.url, headers=headers, timeout=self.timeout)
+
+                else:
+                    raise Exception("Unknown injection type")
+
+                return ResponseData(time.time() - start, len(r.text), r.text, False)
+
+            except Exception:
                 pass
-        return ResponseData(0,0,True)
+
+        return ResponseData(0, 0, "", True)
