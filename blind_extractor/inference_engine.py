@@ -1,17 +1,16 @@
 class InferenceEngine:
-    def __init__(self, requester, baseline, logger):
+    def __init__(self, requester, baseline, logger, config):
         self.req = requester
-        self.base_time, self.std, self.base_len = baseline
-        self.logger = logger
+        self.true_string = config["inference"]["true_string"]
 
     def is_true(self, payload):
         r = self.req.send_payload(payload)
-        decision = r.time > (self.base_time + self.std * 2)
 
-        self.logger.log({
-            "payload": payload,
-            "time": r.time,
-            "decision": decision
-        })
+        print("TESTING:", payload)
 
-        return decision
+        if self.true_string.lower() in r.text.lower():
+            print(" → TRUE")
+            return True
+        else:
+            print(" → FALSE")
+            return False
