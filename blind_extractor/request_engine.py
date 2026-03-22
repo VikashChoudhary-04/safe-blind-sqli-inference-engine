@@ -14,22 +14,25 @@ class ResponseData:
 
 class RequestEngine:
     def __init__(self, config):
-        self.url = config["target"]["url"]
-        self.injection_type = config["injection"]["type"]
-        self.injection_name = config["injection"]["name"]
-        self.base_value = config["injection"]["base_value"]
+        self.config = config
 
+        self.base_url = config["target"]["url"]
         self.timeout = config["network"]["timeout"]
         self.retries = config["network"]["retries"]
 
         self.jitter_min = config["traffic"]["jitter_min_ms"] / 1000
         self.jitter_max = config["traffic"]["jitter_max_ms"] / 1000
 
+        self.method = config["injection"]["method"]
+        self.injection_type = config["injection"]["type"]
+        self.injection_name = config["injection"]["name"]
+
+        self.base_params = config.get("request", {}).get("params", {})
+        self.base_headers = config.get("request", {}).get("headers", {})
+        self.base_cookies = config.get("request", {}).get("cookies", {})
+
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": "Mozilla/5.0"})
-
-        # Initial visit to gather cookies/session
-        self.session.get(self.url)
 
     def _sleep(self):
         time.sleep(random.uniform(self.jitter_min, self.jitter_max))
@@ -40,23 +43,48 @@ class RequestEngine:
                 self._sleep()
                 start = time.time()
 
-                if self.injection_type == "cookie":
-                    cookies = self.session.cookies.get_dict()
-                    cookies[self.injection_name] = self.base_value + payload
-                    r = self.session.get(self.url, cookies=cookies, timeout=self.timeout)
+                params = self.base_params.copy()
+                headers = self.base_headers.copy()
+                cookies = self.base_cookies.copy()
+                data = {}
 
-                elif self.injection_type == "param":
-                    params = {self.injection_name: self.base_value + payload}
-                    r = self.session.get(self.url, params=params, timeout=self.timeout)
+                # 🔥 Injection handling
+                if self.injection_type == "param":
+                    params[self.injection_name] = payload
+
+                elif self.injection_type == "cookie":
+                    cookies[self.injection_name] = payload
 
                 elif self.injection_type == "header":
-                    headers = {self.injection_name: self.base_value + payload}
-                    r = self.session.get(self.url, headers=headers, timeout=self.timeout)
+                    headers[self.injection_name] = payload
 
                 else:
-                    raise Exception("Unknown injection type")
+                    raise ValueError("Invalid injection type")
 
-                return ResponseData(time.time() - start, len(r.text), r.text, False)
+                # 🔥 Request execution
+                if self.method == "GET":
+                    r = self.session.get(
+                        self.base_url,
+                        params=params,
+                        headers=headers,
+                        cookies=cookies,
+                        timeout=self.timeout
+                    )
+                else:
+                    r = self.session.post(
+                        self.base_url,
+                        data=params,
+                        headers=headers,
+                        cookies=cookies,
+                        timeout=self.timeout
+                    )
+
+                return ResponseData(
+                    time.time() - start,
+                    len(r.text),
+                    r.text,
+                    False
+                )
 
             except Exception:
                 pass
