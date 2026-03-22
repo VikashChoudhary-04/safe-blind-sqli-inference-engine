@@ -1,5 +1,5 @@
 class Extractor:
-    def __init__(self, inference_engine, logger, config):
+    def __init__(self, inference_engine, config, logger):
         self.inf = inference_engine
         self.logger = logger
 
@@ -15,7 +15,12 @@ class Extractor:
             found = False
 
             for c in self.charset:
-                payload = self.query_template.format(pos=position, char=c)
+                payload = self.query_template.format(
+                    pos=position,
+                    char=c
+                )
+
+                print(f"TESTING: {payload}")
 
                 if self.inf.is_true(payload):
                     extracted += c
@@ -24,6 +29,8 @@ class Extractor:
                     break
 
             if not found:
+                print("\n[!] No more characters found. Stopping.")
                 break
 
+        print("\nExtraction complete:", extracted)
         return extracted
