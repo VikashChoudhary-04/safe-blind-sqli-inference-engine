@@ -5,7 +5,9 @@ class Extractor:
 
         self.charset = config["extraction"]["charset"]
         self.max_length = config["extraction"]["max_length"]
+
         self.query_template = config["extraction"]["query"]
+        self.base_query = config["extraction"]["base_query"]
 
     def extract(self):
         extracted = ""
@@ -16,6 +18,7 @@ class Extractor:
 
             for c in self.charset:
                 payload = self.query_template.format(
+                    query=self.base_query,
                     pos=position,
                     char=c
                 )
@@ -29,7 +32,7 @@ class Extractor:
                     break
 
             if not found:
-                print("\n[!] No more characters found. Stopping.")
+                print("\n[!] No more characters found.")
                 break
 
         print("\nExtraction complete:", extracted)
